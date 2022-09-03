@@ -153,3 +153,54 @@ models[cls.name] = mongoose.model(cls.name, schema);
 表示先以 tileMin.tileX 和 tileMin.tileY 排序，然后再根据 tileMax.tileX 和 tileMax.tileY 排序
 
 ## routes
+
+后端路由
+
+### feature-classes
+
+讲讲发布shapefile
+
+1. 通过gdal打开shapefile，获取layers[0]，可以拿到geomType，和fields
+2. 创建FeatureClass，加入schema，获取model
+3. 遍历layer.features，获取geometry，坐标转为wgs84，调用tile.calc计算空间索引
+4. 将features插入model
+
+### features
+
+1. 以geojson导出featureClass
+从model中获取所有features，按FeatureCollection的格式写成geojson返回
+
+2. 要素查询
+支持查询要素的geometry、properties中的任意属性，拼接为查询范围在model中查询
+
+### labels、maps、layers、symbols
+
+支持创建、删除、更新、查询
+
+### tiles
+
+1. 获取用于前端渲染的矢量切片
+
+查询路由：/vector/:name/:x/:y/:z
+
+x、y、z都转为整数，组装成索引，在model中找出包含该xyz的瓦片
+
+2. 获取后端渲染好的栅格图片
+
+查询路由：/image/:id/:x/:y/:z
+
+id表示class name或者layer id, 查询得到layer对象
+
+调用canvas.draw(layer, x, y, z)，调用node-canvas的createPNGStream().pipe(res)，返回图片流
+
+3. 获取静态切片图
+
+查询路由：/static/:name/:x/:y/:z
+
+直接组装为文件路径，返回图片文件
+
+## 总结
+
+1. 选mongodb做空间数据的数据库，对于矢量要素，空间索引自己做，效率可能会差一些，好处是实现简单
+2. 在渲染侧除了提供常见的矢量要素，还提供了后端渲染矢量瓦片的功能，比较特别
+3. 渲染样式根据openlayer的样式来自定义，同时可以按属性定值、条件渲染，有一些定制化的过滤方法
